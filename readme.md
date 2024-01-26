@@ -1,0 +1,1 @@
+.\target\debug\log-sniffer.exe --command "ping google.com"
