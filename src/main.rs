@@ -1,26 +1,14 @@
 use clap::Parser;
 use uuid::Uuid;
-use chrono::{Datelike, Timelike, Utc};
+use tungstenite::connect;
+use url::Url;
 
-use std::process::{Command, Stdio, ChildStdout};
-use std::io::{BufRead, BufReader, Error, ErrorKind};
-use std::io::Write;
-use std::fs::{OpenOptions, File};
-use std::sync::mpsc;
+use std::io::Error;
+use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
-fn write_date_to_logs(mut log_file: &File) {
-  let now: chrono::prelude::DateTime<Utc> = Utc::now();
-  if let Err(e) = writeln!(
-    log_file,
-    "\n=============================\n[Started {}-{:02}-{:02} {:02}:{:02}:{:02}]\n=============================\n",
-    now.day(), now.month(), now.year(),
-    now.hour(), now.minute(), now.second()
-  ) {
-    eprintln!("Couldn't write to file: {}", e);
-  }
-}
+mod logs;
 
 /// Takes command as param
 #[derive(Parser, Debug)]
@@ -29,121 +17,41 @@ struct Args {
   /// Command to run
   #[arg(short, long)]
   command: String,
+
+  /// API key to connect to log-sniffer api
+  #[arg(short, long)]
+  key: String,
 }
 
 fn main() -> Result<(), Error> {
-  let my_uuid: Uuid = Uuid::new_v4();
+  let error_code_uuid: Uuid = Uuid::new_v4();
   let args: Args = Args::parse();
+
+  let (mut socket, response) =
+        connect(
+          Url::parse(&format!("ws://localhost:8080?key={}", args.key)).unwrap()
+        ).expect("Can't connect to API.");
+
+  println!("Connected to the server");
+  println!("Response HTTP code: {}", response.status());
   println!("Executing: {}...", args.command);
 
   let (tx, rx) = mpsc::channel();
 
-  thread::spawn(move || {
-    let mut log_file: File = OpenOptions::new()
-      .create(true)
-      .write(true)
-      .append(true)
-      .open("logs.log")
-      .unwrap();
-    write_date_to_logs(&log_file);
-
-    let stdout: ChildStdout = Command::new("cmd")
-      .arg("/C")
-      .arg(&args.command)
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
-      .spawn().expect("")
-      .stdout
-      .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output.")).expect("");
-
-    let reader: BufReader<ChildStdout> = BufReader::new(stdout);
-    reader
-      .lines()
-      .filter_map(|line: Result<String, Error>| line.ok())
-      .for_each(|line: String| {
-        if let Err(e) = writeln!(log_file, "{}", line) {
-          eprintln!("Couldn't write to file: {}", e);
-        }
-        tx.send(line).unwrap();
-      });
-    tx.send(String::from(my_uuid)).unwrap();
-  });
+  logs::write_to_log_file(&tx, &error_code_uuid, &args.command);
 
   let mut lines_to_update: Vec<String>;
   'outer: loop {
     thread::sleep(Duration::from_secs(1));
     lines_to_update = Vec::new();
     for recieved in &rx {
-      if recieved == String::from(my_uuid) {
-        break 'outer
+      if recieved == String::from(error_code_uuid) {
+        break 'outer;
       }
       println!("{}", recieved);
       lines_to_update.push(recieved);
     }
+    logs::send_logs_to_server(&mut socket, &lines_to_update);
   }
   Ok(())
 }
-
-
-
-
-// fn send_logs_to_server(mut lines: &Vec<String>) {
-//   thread::spawn(|| {
-//     loop {
-//       thread::sleep(Duration::from_secs(1));
-
-//     }
-//   });
-// }
-
-// fn write_date_to_logs(mut file: &File) {
-//   let now: chrono::prelude::DateTime<Utc> = Utc::now();
-//   if let Err(e) = writeln!(
-//     file,
-//     "\n=============================\n[Started {}-{:02}-{:02} {:02}:{:02}:{:02}]\n=============================\n",
-//     now.day(), now.month(), now.year(),
-//     now.hour(), now.minute(), now.second()
-//   ) {
-//     eprintln!("Couldn't write to file: {}", e);
-//   }
-// }
-
-// let mut log_file: File = OpenOptions::new()
-// .create(true)
-// .write(true)
-// .append(true)
-// .open("logs.log")
-// .unwrap();
-
-// write_date_to_logs(&log_file);
-
-// let stdout: ChildStdout = Command::new("cmd")
-// .arg("/C")
-// .arg(&args.command)
-// .stdout(Stdio::piped())
-// .stderr(Stdio::piped())
-// .spawn()?
-// .stdout
-// .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))?;
-
-// let reader: BufReader<ChildStdout> = BufReader::new(stdout);
-
-// reader
-// .lines()
-// .filter_map(|line: Result<String, Error>| line.ok())
-// .for_each(|line: String| {
-//   println!("{}", line);
-//   if let Err(e) = writeln!(log_file, "{}", line) {
-//     eprintln!("Couldn't write to file: {}", e);
-//   }
-// });
-
-
-// let mut lines_to_update: Vec<String> = Vec::new();
-// let delay: Duration = Duration::from_millis(10);
-// let debouncer: EventDebouncer<EmptyFunc> = EventDebouncer::<fn() -> !>::new(delay, || {
-//   for x in &lines_to_update {
-//     println!("{x}");
-//   }
-// });
-// debouncer.put();
