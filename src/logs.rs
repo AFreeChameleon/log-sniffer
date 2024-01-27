@@ -64,5 +64,6 @@ pub fn send_logs_to_server(
   lines_to_update: &Vec<String>
 ) {
   let combined_message = lines_to_update.join("\n");
+  println!("Sending: {}", combined_message);
   socket.send(Message::Text(combined_message.into())).unwrap();
 }

@@ -46,6 +46,7 @@ fn main() -> Result<(), Error> {
     lines_to_update = Vec::new();
     for recieved in &rx {
       if recieved == String::from(error_code_uuid) {
+        logs::send_logs_to_server(&mut socket, &lines_to_update);
         break 'outer;
       }
       println!("{}", recieved);
