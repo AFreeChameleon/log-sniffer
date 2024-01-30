@@ -27,6 +27,37 @@ pub fn write_to_log_file(tx_ref: &Sender<String>, error_code_uuid_ref: &Uuid, co
   let error_code_uuid = error_code_uuid_ref.clone();
   let command = command_ref.clone();
   let tx = tx_ref.clone();
+
+  // let mut log_file: File = OpenOptions::new()
+  //   .create(true)
+  //   .write(true)
+  //   .append(true)
+  //   .open("logs.log")
+  //   .unwrap();
+
+  // write_date_to_logs(&log_file);
+
+  // let mut child = Command::new("cmd")
+  //   .arg("/C")
+  //   .arg(&command)
+  //   .stdout(Stdio::piped())
+  //   .stderr(Stdio::piped())
+  //   .spawn()
+  //   .unwrap();
+
+  // let child_stdout = child
+  //   .stdout
+  //   .take()
+  //   .expect("Could not take stdout");
+
+  // let child_stderr = child
+  //   .stderr
+  //   .take()
+  //   .expect("Could not take stdout");
+
+  // thread::spawn(move || {
+
+  // });
   thread::spawn(move || {
     let mut log_file: File = OpenOptions::new()
       .create(true)
@@ -34,6 +65,7 @@ pub fn write_to_log_file(tx_ref: &Sender<String>, error_code_uuid_ref: &Uuid, co
       .append(true)
       .open("logs.log")
       .unwrap();
+
     write_date_to_logs(&log_file);
 
     let stdout: ChildStdout = Command::new("cmd")
@@ -54,7 +86,7 @@ pub fn write_to_log_file(tx_ref: &Sender<String>, error_code_uuid_ref: &Uuid, co
           eprintln!("Couldn't write to file: {}", e);
         }
         tx.send(line).unwrap();
-      });
+      }); 
     tx.send(String::from(error_code_uuid)).unwrap();
   });
 }

@@ -1,9 +1,8 @@
 [package]
-name = "log-sniffer"
+name = "hog"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Chameleo <info@chameleo.dev>"]
 
 [dependencies]
 clap = { version = "4.4.18", features = ["derive"] }
@@ -13,7 +12,7 @@ url = "2.5.0"
 [dependencies.uuid]
 version = "1.7.0"
 features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+    "v4",
+    "fast-rng",
+    "macro-diagnostics",
 ]
