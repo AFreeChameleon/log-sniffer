@@ -27,13 +27,12 @@ fn main() -> Result<(), Error> {
   let error_code_uuid: Uuid = Uuid::new_v4();
   let args: Args = Args::parse();
 
-  let (mut socket, response) =
+  let (mut socket, _response) =
         connect(
           Url::parse(&format!("wss://hog.chameleo.dev:8080?key={}", args.key)).unwrap()
         ).expect("Can't connect to API.");
 
   println!("Connected to the server");
-  println!("Response HTTP code: {}", response.status());
   println!("Executing: {}...", args.command);
 
   let (tx, rx) = mpsc::channel();
@@ -42,7 +41,7 @@ fn main() -> Result<(), Error> {
 
   let mut lines_to_update: Vec<String>;
   'outer: loop {
-    thread::sleep(Duration::from_secs(1));
+    thread::sleep(Duration::from_millis(200));
     lines_to_update = Vec::new();
     for recieved in &rx {
       if recieved == String::from(error_code_uuid) {
