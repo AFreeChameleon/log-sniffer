@@ -29,7 +29,7 @@ fn main() -> Result<(), Error> {
 
   let (mut socket, response) =
         connect(
-          Url::parse(&format!("ws://localhost:8080?key={}", args.key)).unwrap()
+          Url::parse(&format!("wss://hog.chameleo.dev:8080?key={}", args.key)).unwrap()
         ).expect("Can't connect to API.");
 
   println!("Connected to the server");
