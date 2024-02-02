@@ -74,7 +74,7 @@ pub fn write_to_log_file(
     write_date_to_logs(&log_file);
 
     let stdout: ChildStdout;
-    if env::consts::OS == "windows" {
+    if cfg!(target_os = "windows") {
         stdout = Command::new("cmd")
             .arg("/C")
             .arg(&command)
@@ -85,6 +85,7 @@ pub fn write_to_log_file(
             .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output.")).expect("");
     } else {
         stdout = Command::new("sh")
+            .arg("-c")
             .arg(&command)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
