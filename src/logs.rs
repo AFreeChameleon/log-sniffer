@@ -10,6 +10,7 @@ use std::io::Write;
 use std::fs::{OpenOptions, File};
 use std::sync::mpsc::Sender;
 use std::thread;
+use std::env;
 
 fn write_date_to_logs(mut log_file: &File) {
   let now: chrono::prelude::DateTime<Utc> = Utc::now();
@@ -23,7 +24,11 @@ fn write_date_to_logs(mut log_file: &File) {
   }
 }
 
-pub fn write_to_log_file(tx_ref: &Sender<String>, error_code_uuid_ref: &Uuid, command_ref: &String) {
+pub fn write_to_log_file(
+    tx_ref: &Sender<String>,
+    error_code_uuid_ref: &Uuid, 
+    command_ref: &String
+) {
   let error_code_uuid = error_code_uuid_ref.clone();
   let command = command_ref.clone();
   let tx = tx_ref.clone();
@@ -68,14 +73,25 @@ pub fn write_to_log_file(tx_ref: &Sender<String>, error_code_uuid_ref: &Uuid, co
 
     write_date_to_logs(&log_file);
 
-    let stdout: ChildStdout = Command::new("cmd")
-      .arg("/C")
-      .arg(&command)
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
-      .spawn().expect("")
-      .stdout
-      .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output.")).expect("");
+    let stdout: ChildStdout;
+    if env::consts::OS == "windows" {
+        stdout = Command::new("cmd")
+            .arg("/C")
+            .arg(&command)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn().expect("")
+            .stdout
+            .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output.")).expect("");
+    } else {
+        stdout = Command::new("sh")
+            .arg(&command)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn().expect("")
+            .stdout
+            .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output.")).expect("");
+    }
 
     let reader: BufReader<ChildStdout> = BufReader::new(stdout);
     reader
