@@ -38,20 +38,26 @@ fn main() -> Result<(), Error> {
   let (tx, rx) = mpsc::channel();
 
   logs::write_to_log_file(&tx, &error_code_uuid, &args.command);
-
-  let mut lines_to_update: Vec<String>;
+  let mut lines_to_update: Vec<String> = Vec::new();
   'outer: loop {
     thread::sleep(Duration::from_millis(200));
-    lines_to_update = Vec::new();
-    for recieved in &rx {
-      if recieved == String::from(error_code_uuid) {
-        logs::send_logs_to_server(&mut socket, &lines_to_update);
-        break 'outer;
-      }
-      println!("{}", recieved);
-      lines_to_update.push(recieved);
+    'inner: loop {
+        let recieved = &rx.recv_timeout(Duration::from_millis(10));
+        // This errors if nothing to get
+        if recieved.is_err() {
+            break 'inner;
+        }
+        let msg = recieved.clone().ok().unwrap();
+        if msg == String::from(error_code_uuid) {
+           break 'outer;
+        }
+        lines_to_update.push(msg);
     }
-    logs::send_logs_to_server(&mut socket, &lines_to_update);
+    if lines_to_update.len() > 0 {
+        logs::send_logs_to_server(&mut socket, &lines_to_update);
+        lines_to_update = Vec::new();
+    }
   }
+  logs::send_logs_to_server(&mut socket, &lines_to_update);
   Ok(())
 }

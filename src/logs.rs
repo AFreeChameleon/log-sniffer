@@ -10,7 +10,6 @@ use std::io::Write;
 use std::fs::{OpenOptions, File};
 use std::sync::mpsc::Sender;
 use std::thread;
-use std::env;
 
 fn write_date_to_logs(mut log_file: &File) {
   let now: chrono::prelude::DateTime<Utc> = Utc::now();
@@ -113,6 +112,6 @@ pub fn send_logs_to_server(
   lines_to_update: &Vec<String>
 ) {
   let combined_message = lines_to_update.join("\n");
-  println!("Sending: {}", combined_message);
+  println!("Sending: {} huh {:?}", combined_message, lines_to_update);
   socket.send(Message::Text(combined_message.into())).unwrap();
 }
